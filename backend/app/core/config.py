@@ -21,6 +21,8 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://localhost:8000",
+        "https://homeservicebooking1.netlify.app",
+        "https://homeserve-platform.onrender.com",
     ]
 
     @field_validator("CORS_ORIGINS", mode="before")
