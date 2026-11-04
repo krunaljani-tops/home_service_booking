@@ -233,3 +233,4 @@ def auto_seed_if_empty(db: Session):
     except Exception as e:
         print(f"Auto-seed exception: {e}")
         db.rollback()
+

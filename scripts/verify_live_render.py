@@ -34,3 +34,4 @@ print(f"Services ({srv_res.status_code}): {len(srv_res.json().get('items', srv_r
 
 bk_res = requests.get(f"{LIVE_URL}/api/v1/bookings", headers=admin_h)
 print(f"Bookings ({bk_res.status_code}): {len(bk_res.json().get('items', bk_res.json()))} bookings loaded")
+
