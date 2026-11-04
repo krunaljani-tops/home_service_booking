@@ -57,17 +57,21 @@ def list_providers(
             )
         )
     if service_id:
-        query = query.join(ProviderService).filter(
+        subquery = db.query(ProviderService.provider_id).filter(
             ProviderService.service_id == service_id,
             ProviderService.is_available.is_(True),
         )
+        query = query.filter(ServiceProvider.id.in_(subquery))
     if city:
-        query = query.join(ServiceArea).filter(ServiceArea.city.ilike(f"%{city}%"))
+        subquery = db.query(ServiceArea.provider_id).filter(
+            ServiceArea.city.ilike(f"%{city}%")
+        )
+        query = query.filter(ServiceProvider.id.in_(subquery))
 
-    total = query.distinct().count()
+    total = query.count()
     pages = math.ceil(total / limit) if total > 0 else 0
     offset = (page - 1) * limit
-    providers = query.distinct().order_by(ServiceProvider.rating_avg.desc()).offset(offset).limit(limit).all()
+    providers = query.order_by(ServiceProvider.rating_avg.desc()).offset(offset).limit(limit).all()
 
     return ProviderListResponse(
         items=[ProviderResponse.model_validate(p) for p in providers],

@@ -35,16 +35,31 @@ export default function BookService() {
   useEffect(() => {
     async function loadOptions() {
       try {
-        const [sRes, pRes] = await Promise.all([
+        const [sRes, pRes] = await Promise.allSettled([
           serviceService.getServices({ limit: 50 }),
           serviceService.getProviders({ limit: 50 }),
         ]);
-        setServices(sRes.items || sRes || []);
-        setProviders(pRes.items || pRes || []);
-        if (!serviceId && sRes.items?.length) setServiceId(sRes.items[0].id);
-        if (!providerId && pRes.items?.length) setProviderId(pRes.items[0].id);
+
+        const sItems = sRes.status === 'fulfilled' ? (sRes.value.items || sRes.value || []) : [];
+        const pItems = pRes.status === 'fulfilled' ? (pRes.value.items || pRes.value || []) : [];
+
+        setServices(sItems);
+        setProviders(pItems);
+
+        // Pre-select or select first option
+        if (preServiceId) {
+          setServiceId(String(preServiceId));
+        } else if (sItems.length > 0) {
+          setServiceId(String(sItems[0].id));
+        }
+
+        if (preProviderId) {
+          setProviderId(String(preProviderId));
+        } else if (pItems.length > 0) {
+          setProviderId(String(pItems[0].id));
+        }
       } catch (err) {
-        console.error(err);
+        console.error('Failed to load booking options', err);
       } finally {
         setLoading(false);
       }
@@ -99,6 +114,7 @@ export default function BookService() {
               className="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2 px-3 border"
               required
             >
+              <option value="" disabled>Select a service...</option>
               {services.map((s) => (
                 <option key={s.id} value={s.id}>{s.name} - ₹{s.base_price}</option>
               ))}
@@ -113,8 +129,9 @@ export default function BookService() {
               className="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2 px-3 border"
               required
             >
+              <option value="" disabled>Select a provider...</option>
               {providers.map((p) => (
-                <option key={p.id} value={p.id}>{p.company_name} (Rating: {p.rating_avg} ★)</option>
+                <option key={p.id} value={p.id}>{p.company_name} (Rating: {p.rating_avg || '5.0'} ★)</option>
               ))}
             </select>
           </div>
