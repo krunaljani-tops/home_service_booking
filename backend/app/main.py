@@ -2,12 +2,13 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.exceptions import AppException
-from app.database.session import engine, Base
+from app.database.session import engine, Base, SessionLocal
+from app.database.seeder import auto_seed_if_empty
 
 # Import all models to ensure metadata is registered
 import app.models  # noqa: F401
@@ -33,11 +34,13 @@ from app.api.v1.addresses import router as addresses_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifecycle event handler for database setup."""
+    """Lifecycle event handler for database setup and initial seeding."""
     try:
         Base.metadata.create_all(bind=engine)
+        with SessionLocal() as db:
+            auto_seed_if_empty(db)
     except Exception as e:
-        print(f"Warning: Database auto-table creation: {e}")
+        print(f"Warning: Database auto-setup / seed: {e}")
     yield
 
 
@@ -100,3 +103,21 @@ app.include_router(notifications_router, prefix=api_v1_prefix)
 app.include_router(reports_router, prefix=api_v1_prefix)
 app.include_router(addresses_router, prefix=api_v1_prefix)
 
+# Locate frontend production build directory
+dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+if not os.path.exists(dist_dir):
+    dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static"))
+
+if os.path.exists(dist_dir):
+    assets_dir = os.path.join(dist_dir, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("redoc") or full_path.startswith("openapi.json"):
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
+        file_path = os.path.join(dist_dir, full_path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(dist_dir, "index.html"))

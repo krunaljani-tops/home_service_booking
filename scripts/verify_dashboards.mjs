@@ -170,3 +170,4 @@ const ROLES_TEST = [
     process.exit(1);
   }
 })();
+
