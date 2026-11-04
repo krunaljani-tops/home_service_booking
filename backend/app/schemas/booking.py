@@ -43,11 +43,16 @@ class BookingAssignmentResponse(BaseModel):
 class BookingCreate(BaseModel):
     provider_id: int
     service_id: int
-    address_id: int
+    address_id: Optional[int] = None
     scheduled_date: date
     scheduled_time: time
     duration_minutes: int = 60
     description: Optional[str] = None
+    coupon_code: Optional[str] = None
+    address_line1: Optional[str] = None
+    city: Optional[str] = "Mumbai"
+    state: Optional[str] = "Maharashtra"
+    postal_code: Optional[str] = "400001"
     coupon_code: Optional[str] = None
 
 

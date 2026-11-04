@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Calendar, Clock, MapPin, Tag, CheckCircle } from 'lucide-react';
+import api from '../../services/api';
 import serviceService from '../../services/serviceService';
 import bookingService from '../../services/bookingService';
 import Card from '../../components/ui/Card';
@@ -18,33 +19,38 @@ export default function BookService() {
 
   const [services, setServices] = useState([]);
   const [providers, setProviders] = useState([]);
+  const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   // Form state
   const [serviceId, setServiceId] = useState(preServiceId || '');
   const [providerId, setProviderId] = useState(preProviderId || '');
-  const [scheduledDate, setScheduledDate] = useState('');
-  const [scheduledTime, setScheduledTime] = useState('10:00');
+  const [addressId, setAddressId] = useState('');
   const [addressLine, setAddressLine] = useState('');
   const [city, setCity] = useState('Mumbai');
   const [postalCode, setPostalCode] = useState('400001');
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('10:00');
   const [description, setDescription] = useState('');
   const [couponCode, setCouponCode] = useState('');
 
   useEffect(() => {
     async function loadOptions() {
       try {
-        const [sRes, pRes] = await Promise.allSettled([
+        const [sRes, pRes, aRes] = await Promise.allSettled([
           serviceService.getServices({ limit: 50 }),
           serviceService.getProviders({ limit: 50 }),
+          api.get('/api/v1/addresses'),
         ]);
 
         const sItems = sRes.status === 'fulfilled' ? (sRes.value.items || sRes.value || []) : [];
         const pItems = pRes.status === 'fulfilled' ? (pRes.value.items || pRes.value || []) : [];
+        const addrList = aRes.status === 'fulfilled' ? (aRes.value.data.items || aRes.value.data || []) : [];
 
         setServices(sItems);
         setProviders(pItems);
+        setAddresses(addrList);
 
         // Pre-select or select first option
         if (preServiceId) {
@@ -58,6 +64,11 @@ export default function BookService() {
         } else if (pItems.length > 0) {
           setProviderId(String(pItems[0].id));
         }
+
+        if (addrList.length > 0) {
+          const def = addrList.find((a) => a.is_default) || addrList[0];
+          setAddressId(String(def.id));
+        }
       } catch (err) {
         console.error('Failed to load booking options', err);
       } finally {
@@ -70,7 +81,7 @@ export default function BookService() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!scheduledDate || !scheduledTime) {
-      toast.error("Please pick a scheduled date and time");
+      toast.error('Please pick a scheduled date and time');
       return;
     }
     setSubmitting(true);
@@ -78,18 +89,30 @@ export default function BookService() {
       const payload = {
         provider_id: parseInt(providerId),
         service_id: parseInt(serviceId),
-        address_id: 1, // Fallback default seed address or first created
+        address_id: addressId ? parseInt(addressId) : undefined,
+        address_line1: addressLine || 'Customer Residence',
+        city: city || 'Mumbai',
+        state: 'Maharashtra',
+        postal_code: postalCode || '400001',
         scheduled_date: scheduledDate,
-        scheduled_time: scheduledTime + ":00",
+        scheduled_time: scheduledTime.length === 5 ? scheduledTime + ':00' : scheduledTime,
         duration_minutes: 60,
         description: description,
         coupon_code: couponCode ? couponCode.trim() : null,
       };
       const res = await bookingService.createBooking(payload);
-      toast.success("Service booked successfully!");
+      toast.success('Service booked successfully!');
       navigate(`/customer/bookings/${res.id}`);
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Failed to submit booking");
+      const msg =
+        err.response?.data?.error?.message ||
+        err.response?.data?.detail ||
+        (Array.isArray(err.response?.data?.detail)
+          ? err.response.data.detail.map((d) => d.msg).join(', ')
+          : null) ||
+        err.message ||
+        'Failed to submit booking';
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -136,6 +159,54 @@ export default function BookService() {
             </select>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Service Address</label>
+            {addresses.length > 0 ? (
+              <div className="space-y-2 mb-2">
+                <select
+                  value={addressId}
+                  onChange={(e) => setAddressId(e.target.value)}
+                  className="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2 px-3 border"
+                >
+                  {addresses.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.label ? `${a.label}: ` : ''}{a.address_line1}, {a.city} {a.postal_code || ''}
+                    </option>
+                  ))}
+                  <option value="">+ Enter a new address below</option>
+                </select>
+              </div>
+            ) : null}
+
+            {(!addressId || addresses.length === 0) && (
+              <div className="space-y-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                <Input
+                  label="Street Address / Flat No."
+                  placeholder="e.g. 101, Sunshine Heights, MG Road"
+                  value={addressLine}
+                  onChange={(e) => setAddressLine(e.target.value)}
+                  required={!addressId}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    label="City"
+                    placeholder="Mumbai"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    required={!addressId}
+                  />
+                  <Input
+                    label="Postal Code"
+                    placeholder="400001"
+                    value={postalCode}
+                    onChange={(e) => setPostalCode(e.target.value)}
+                    required={!addressId}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Scheduled Date"
@@ -176,20 +247,16 @@ export default function BookService() {
             onChange={(e) => setCouponCode(e.target.value)}
           />
 
-          <div className="pt-4 border-t">
-            <Button
-              type="submit"
-              variant="primary"
-              className="w-full"
-              disabled={submitting}
-              icon={<CheckCircle className="w-4 h-4" />}
-            >
-              {submitting ? 'Confirming Booking...' : 'Confirm & Schedule Booking'}
-            </Button>
-          </div>
+          <Button
+            type="submit"
+            className="w-full"
+            loading={submitting}
+            icon={CheckCircle}
+          >
+            Confirm & Schedule Booking
+          </Button>
         </form>
       </Card>
     </div>
   );
 }
-
