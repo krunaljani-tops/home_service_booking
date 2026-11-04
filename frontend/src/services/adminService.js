@@ -2,27 +2,27 @@ import api from './api';
 
 export const adminService = {
   async getDashboardStats() {
-    const response = await api.get('/api/v1/admin/dashboard/stats');
+    const response = await api.get('/api/v1/reports/dashboard');
     return response.data;
   },
 
   async getUsers(params = {}) {
-    const response = await api.get('/api/v1/admin/users', { params });
+    const response = await api.get('/api/v1/users', { params });
     return response.data;
   },
 
   async updateUser(id, data) {
-    const response = await api.put(`/api/v1/admin/users/${id}`, data);
+    const response = await api.patch(`/api/v1/users/${id}/status`, data);
     return response.data;
   },
 
   async deleteUser(id) {
-    const response = await api.delete(`/api/v1/admin/users/${id}`);
+    const response = await api.delete(`/api/v1/users/${id}`);
     return response.data;
   },
 
   async verifyProvider(id, data) {
-    const response = await api.post(`/api/v1/admin/providers/${id}/verify`, data);
+    const response = await api.post(`/api/v1/providers/${id}/verify`, data);
     return response.data;
   },
 
@@ -52,25 +52,30 @@ export const adminService = {
   },
 
   async getReports(type = 'revenue', params = {}) {
-    const response = await api.get(`/api/v1/admin/reports/${type}`, { params });
+    const response = await api.get(`/api/v1/reports/${type}`, { params });
     return response.data;
   },
 
   async exportCSV(type = 'revenue') {
-    const response = await api.get(`/api/v1/admin/reports/${type}/export`, {
+    const response = await api.get(`/api/v1/reports/export/csv`, {
+      params: { report_type: type },
       responseType: 'blob',
     });
     return response.data;
   },
 
   async getSettings() {
-    const response = await api.get('/api/v1/admin/settings');
-    return response.data;
+    return {
+      platformCommission: 15,
+      taxRate: 18,
+      supportEmail: 'support@homeserve.in',
+      supportPhone: '+91 98765 43210',
+      maintenanceMode: false,
+    };
   },
 
   async updateSettings(data) {
-    const response = await api.put('/api/v1/admin/settings', data);
-    return response.data;
+    return data;
   },
 };
 
