@@ -61,3 +61,4 @@ const NETLIFY_URL = 'https://homeservicebooking1.netlify.app';
   await browser.close();
   console.log('=== NETLIFY VERIFICATION FINISHED ===');
 })();
+
