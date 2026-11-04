@@ -15,7 +15,9 @@ export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles.length > 0 && user && !allowedRoles.includes(user.role)) {
+  const userRole = (user?.role || '').toUpperCase();
+  const normalizedAllowed = allowedRoles.map((r) => r.toUpperCase());
+  if (allowedRoles.length > 0 && user && !normalizedAllowed.includes(userRole)) {
     return <Navigate to="/unauthorized" replace />;
   }
 

@@ -45,12 +45,15 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.login(email, password);
       // Support both { token, user } and { access_token, user }
       const accessToken = response.token || response.access_token;
-      const userData = response.user || {
-        id: response.id || 'usr_1',
-        email,
-        name: response.name || email.split('@')[0],
-        role: response.role || roleHint || 'customer',
-      };
+      const rawRole = (response.user?.role || roleHint || 'CUSTOMER').toUpperCase();
+      const userData = response.user
+        ? { ...response.user, role: (response.user.role || rawRole).toUpperCase() }
+        : {
+            id: response.id || 'usr_1',
+            email,
+            name: response.name || email.split('@')[0],
+            role: rawRole,
+          };
 
       localStorage.setItem('token', accessToken);
       localStorage.setItem('user', JSON.stringify(userData));
@@ -84,13 +87,16 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authService.register(data);
       const accessToken = response.token || response.access_token || 'mock_registered_token';
-      const userData = response.user || {
-        id: response.id || 'usr_' + Date.now(),
-        email: data.email,
-        name: data.name || `${data.first_name || ''} ${data.last_name || ''}`.trim(),
-        role: data.role || 'customer',
-        phone: data.phone || '',
-      };
+      const rawRole = (response.user?.role || data.role || 'CUSTOMER').toUpperCase();
+      const userData = response.user
+        ? { ...response.user, role: (response.user.role || rawRole).toUpperCase() }
+        : {
+            id: response.id || 'usr_' + Date.now(),
+            email: data.email,
+            name: data.name || `${data.first_name || ''} ${data.last_name || ''}`.trim(),
+            role: rawRole,
+            phone: data.phone || '',
+          };
 
       localStorage.setItem('token', accessToken);
       localStorage.setItem('user', JSON.stringify(userData));

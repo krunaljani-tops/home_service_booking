@@ -24,25 +24,44 @@ export const RegisterPage = () => {
 
   const onSubmit = async (data) => {
     try {
+      const nameParts = (data.name || '').trim().split(/\s+/);
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      const backendRole = activeTab === 'provider' ? 'SERVICE_PROVIDER' : 'CUSTOMER';
       const payload = {
-        ...data,
-        role: activeTab,
-        company_details: activeTab === 'provider' ? {
-          company_name: data.company_name,
-          business_license: docFile ? docFile.name : 'pending_document.pdf',
-        } : null,
+        email: data.email,
+        password: data.password,
+        phone: data.phone,
+        first_name: firstName,
+        last_name: lastName,
+        name: data.name,
+        role: backendRole,
+        company_name: activeTab === 'provider' ? (data.company_name || `${firstName}'s Services`) : undefined,
       };
 
-      const res = await authRegister(payload);
+      await authRegister(payload);
       toast.success('Registration successful! Welcome to HomeServe.');
 
-      if (activeTab === 'provider') {
-        navigate('/provider/dashboard');
+      if (backendRole === 'SERVICE_PROVIDER') {
+        navigate('/provider', { replace: true });
       } else {
-        navigate('/customer/dashboard');
+        navigate('/customer', { replace: true });
       }
     } catch (error) {
-      const msg = error.response?.data?.detail || error.message || 'Registration failed';
+      let msg = 'Registration failed';
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (typeof detail === 'string') {
+          msg = detail;
+        } else if (Array.isArray(detail)) {
+          msg = detail.map((d) => d.msg || JSON.stringify(d)).join(', ');
+        } else {
+          msg = JSON.stringify(detail);
+        }
+      } else if (error.message) {
+        msg = error.message;
+      }
       toast.error(msg);
     }
   };

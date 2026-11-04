@@ -17,7 +17,7 @@ def create_zip_stream(folder_path):
     zip_buffer.seek(0)
     return zip_buffer.getvalue()
 
-def deploy(token: str, site_name: str = "homeserve-platform"):
+def deploy(token: str, site_id: str = "e20f3229-87d2-40f7-842e-99f0988db48a"):
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/zip",
@@ -30,11 +30,11 @@ def deploy(token: str, site_name: str = "homeserve-platform"):
 
     print(f"Packaging {dist_dir} into zip buffer...")
     zip_bytes = create_zip_stream(dist_dir)
-    print(f"Zip created ({len(zip_bytes)} bytes). Deploying to Netlify...")
+    print(f"Zip created ({len(zip_bytes)} bytes). Deploying to Netlify site {site_id}...")
 
-    # Check or create site
+    # Upload to existing site
     res = requests.post(
-        f"{NETLIFY_API}/sites",
+        f"{NETLIFY_API}/sites/{site_id}/deploys",
         headers=headers,
         data=zip_bytes,
     )
@@ -42,9 +42,9 @@ def deploy(token: str, site_name: str = "homeserve-platform"):
     if res.status_code in [200, 201]:
         data = res.json()
         print(f"SUCCESSFULLY DEPLOYED TO NETLIFY!")
+        print(f"Deploy ID: {data.get('id')}")
         print(f"Site Name: {data.get('name')}")
         print(f"Live URL: {data.get('ssl_url') or data.get('url')}")
-        print(f"Admin URL: {data.get('admin_url')}")
     else:
         print(f"Deployment failed ({res.status_code}): {res.text}")
 
