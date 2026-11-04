@@ -9,6 +9,4 @@ backend/app/**/__pycache__
 *.pyo
 .env
 .DS_Store
-dist
-frontend/dist
 scripts/
