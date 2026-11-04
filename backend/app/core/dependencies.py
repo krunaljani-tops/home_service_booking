@@ -19,7 +19,10 @@ def get_current_user(
         raise UnauthorizedException("Authentication credentials were not provided")
 
     token = credentials.credentials
-    payload = decode_access_token(token)
+    try:
+        payload = decode_access_token(token)
+    except Exception:
+        raise UnauthorizedException("Invalid or expired authentication token")
     if payload is None:
         raise UnauthorizedException("Invalid or expired authentication token")
 
